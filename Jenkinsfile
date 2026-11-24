@@ -1,6 +1,5 @@
 
 pipeline {
-
     agent {
         label 'linux-agent'
     }
@@ -23,7 +22,6 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 echo 'Checking out source code from GitHub'
@@ -36,14 +34,6 @@ pipeline {
                 echo "Application: ${env.APP_NAME}"
                 echo "Version: ${env.APP_VERSION}"
                 echo "Selected Environment: ${params.DEPLOY_ENV}"
-                echo "Build Number: ${env.BUILD_NUMBER}"
-                echo "Job Name: ${env.JOB_NAME}"
-                echo "Agent Name: ${env.NODE_NAME}"
-
-                sh '''
-                    echo "Workspace: $WORKSPACE"
-                    echo "Deployment Environment: $DEPLOY_ENV"
-                '''
             }
         }
 
@@ -74,6 +64,39 @@ pipeline {
             }
         }
 
+        stage('Deploy to Development') {
+            when {
+                expression {
+                    params.DEPLOY_ENV == 'dev'
+                }
+            }
+            steps {
+                echo 'Deployment stage is running for DEV environment'
+            }
+        }
+
+        stage('Deploy to Staging') {
+            when {
+                expression {
+                    params.DEPLOY_ENV == 'staging'
+                }
+            }
+            steps {
+                echo 'Deployment stage is running for STAGING environment'
+            }
+        }
+
+        stage('Deploy to Production') {
+            when {
+                expression {
+                    params.DEPLOY_ENV == 'production'
+                }
+            }
+            steps {
+                echo 'Deployment stage is running for PRODUCTION environment'
+            }
+        }
+
         stage('Archive') {
             steps {
                 archiveArtifacts artifacts: 'backend/target/*.jar',
@@ -86,11 +109,9 @@ pipeline {
         success {
             echo 'Pipeline completed successfully'
         }
-
         failure {
             echo 'Pipeline failed. Check Console Output'
         }
-
         always {
             echo 'Pipeline execution finished'
         }
