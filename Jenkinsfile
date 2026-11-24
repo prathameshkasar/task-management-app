@@ -37,20 +37,24 @@ pipeline {
             }
         }
 
-        stage('Build') {
-            steps {
-                echo 'Building Spring Boot application'
-                dir('backend') {
-                    sh 'mvn clean compile'
+        stage('Build and Test') {
+            parallel {
+                stage('Build') {
+                    steps {
+                        echo 'Building Spring Boot application'
+                        dir('backend') {
+                            sh 'mvn clean compile'
+                        }
+                    }
                 }
-            }
-        }
 
-        stage('Test') {
-            steps {
-                echo 'Running application tests'
-                dir('backend') {
-                    sh 'mvn test'
+                stage('Test') {
+                    steps {
+                        echo 'Running application tests'
+                        dir('backend') {
+                            sh 'mvn test'
+                        }
+                    }
                 }
             }
         }
