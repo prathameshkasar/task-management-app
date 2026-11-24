@@ -29,9 +29,10 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout') {
             steps {
-                echo 'Checking out source code'
+                echo 'Checking out source code from GitHub'
                 checkout scm
             }
         }
@@ -41,6 +42,8 @@ pipeline {
                 echo "Application: ${env.APP_NAME}"
                 echo "Version: ${env.APP_VERSION}"
                 echo "Environment: ${params.DEPLOY_ENV}"
+                echo "Build Number: ${env.BUILD_NUMBER}"
+                echo "Agent Name: ${env.NODE_NAME}"
             }
         }
 
@@ -104,6 +107,28 @@ pipeline {
             }
         }
 
+        stage('Verify Jenkins Credentials') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKERHUB_USERNAME',
+                        passwordVariable: 'DOCKERHUB_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+                            echo "Docker Hub credentials are available"
+			    echo "$DOCKERHUB_USERNAME"
+                        else
+                            echo "Docker Hub credentials are missing"
+                            exit 1
+                        fi
+                    '''
+                }
+            }
+        }
+
         stage('Deploy to Development') {
             when {
                 expression {
@@ -139,8 +164,10 @@ pipeline {
 
         stage('Archive') {
             steps {
-                archiveArtifacts artifacts: 'backend/target/*.jar',
-                                 fingerprint: true
+                archiveArtifacts(
+                    artifacts: 'backend/target/*.jar',
+                    fingerprint: true
+                )
             }
         }
 
@@ -156,12 +183,15 @@ pipeline {
         success {
             echo 'Pipeline completed successfully'
         }
+
         unstable {
             echo 'Pipeline completed with unstable status'
         }
+
         failure {
             echo 'Pipeline failed. Check Console Output'
         }
+
         always {
             echo 'Pipeline execution finished'
         }
