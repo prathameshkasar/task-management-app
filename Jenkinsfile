@@ -12,7 +12,7 @@ pipeline {
         choice(
             name: 'DEPLOY_ENV',
             choices: ['dev', 'staging', 'production'],
-            description: 'Select the deployment environment'
+            description: 'Select deployment environment'
         )
     }
 
@@ -24,44 +24,62 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                echo 'Checking out source code from GitHub'
+                echo 'Checking out source code'
                 checkout scm
             }
         }
 
-        stage('Show Parameters and Environment') {
+        stage('Error Handling with Try Catch') {
             steps {
-                echo "Application: ${env.APP_NAME}"
-                echo "Version: ${env.APP_VERSION}"
-                echo "Selected Environment: ${params.DEPLOY_ENV}"
+                script {
+                    try {
+                        echo 'Executing application validation'
+                        sh 'echo "Validation successful"'
+                    } catch (Exception e) {
+                        echo "Error occurred: ${e.getMessage()}"
+                        currentBuild.result = 'UNSTABLE'
+                    }
+                }
             }
         }
 
-        stage('Build and Test') {
-            parallel {
-                stage('Build') {
-                    steps {
-                        echo 'Building Spring Boot application'
-                        dir('backend') {
-                            sh 'mvn clean compile'
-                        }
-                    }
+        stage('Retry Example') {
+            steps {
+                retry(3) {
+                    echo 'Executing retry example'
+                    sh 'echo "Command executed successfully"'
                 }
+            }
+        }
 
-                stage('Test') {
-                    steps {
-                        echo 'Running application tests'
-                        dir('backend') {
-                            sh 'mvn test'
-                        }
-                    }
+        stage('Timeout Example') {
+            steps {
+                timeout(time: 2, unit: 'MINUTES') {
+                    echo 'Executing command within 2 minutes'
+                    sh 'sleep 5'
+                    echo 'Command completed within timeout'
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                dir('backend') {
+                    sh 'mvn clean compile'
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir('backend') {
+                    sh 'mvn test'
                 }
             }
         }
 
         stage('Package') {
             steps {
-                echo 'Creating application JAR'
                 dir('backend') {
                     sh 'mvn package'
                 }
@@ -75,7 +93,7 @@ pipeline {
                 }
             }
             steps {
-                echo 'Deployment stage is running for DEV environment'
+                echo 'Deployment stage running for DEV'
             }
         }
 
@@ -86,7 +104,7 @@ pipeline {
                 }
             }
             steps {
-                echo 'Deployment stage is running for STAGING environment'
+                echo 'Deployment stage running for STAGING'
             }
         }
 
@@ -97,7 +115,7 @@ pipeline {
                 }
             }
             steps {
-                echo 'Deployment stage is running for PRODUCTION environment'
+                echo 'Deployment stage running for PRODUCTION'
             }
         }
 
@@ -112,6 +130,9 @@ pipeline {
     post {
         success {
             echo 'Pipeline completed successfully'
+        }
+        unstable {
+            echo 'Pipeline completed with unstable status'
         }
         failure {
             echo 'Pipeline failed. Check Console Output'
