@@ -150,7 +150,6 @@ pipeline {
                 ]) {
                     sh '''
                         set +x
-
                         trap 'docker logout' EXIT
 
                         echo "$DOCKERHUB_TOKEN" | docker login \
@@ -173,8 +172,34 @@ pipeline {
                     params.DEPLOY_ENV == 'dev'
                 }
             }
+
             steps {
-                echo 'Deployment stage running for DEV'
+                echo 'Deploying application to Kubernetes DEV'
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKERHUB_USERNAME',
+                        passwordVariable: 'DOCKERHUB_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        kubectl apply -f k8s/deployment.yaml
+                        kubectl apply -f k8s/service.yaml
+
+                        kubectl set image deployment/task-management-app \
+                            task-management-app=$DOCKERHUB_USERNAME/task-management-app:${BUILD_NUMBER}
+
+                        kubectl rollout status deployment/task-management-app \
+                            --timeout=180s
+
+                        echo "Checking Kubernetes deployment"
+
+                        kubectl get deployments
+                        kubectl get pods
+                        kubectl get services
+                    '''
+                }
             }
         }
 
@@ -184,8 +209,9 @@ pipeline {
                     params.DEPLOY_ENV == 'staging'
                 }
             }
+
             steps {
-                echo 'Deployment stage running for STAGING'
+                echo 'Staging deployment is not configured yet'
             }
         }
 
@@ -195,8 +221,9 @@ pipeline {
                     params.DEPLOY_ENV == 'production'
                 }
             }
+
             steps {
-                echo 'Deployment stage running for PRODUCTION'
+                echo 'Production deployment is not configured yet'
             }
         }
 
