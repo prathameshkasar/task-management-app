@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: task-management-app
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: task-management-app
+
+  template:
+    metadata:
+      labels:
+        app: task-management-app
+
+    spec:
+      containers:
+        - name: task-management-app
+          image: prathameshkasar/task-management-app:11
+
+          ports:
+            - containerPort: 8080
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          startupProbe:
+            httpGet:
+              path: /api/tasks
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 30
+
+          livenessProbe:
+            httpGet:
+              path: /api/tasks
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /api/tasks
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 3
