@@ -119,11 +119,49 @@ pipeline {
                     sh '''
                         if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
                             echo "Docker Hub credentials are available"
-			    echo "$DOCKERHUB_USERNAME"
                         else
                             echo "Docker Hub credentials are missing"
                             exit 1
                         fi
+                    '''
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building Docker image'
+
+                sh '''
+                    docker build \
+                        -t task-management-app:${BUILD_NUMBER} .
+                '''
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKERHUB_USERNAME',
+                        passwordVariable: 'DOCKERHUB_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        set +x
+
+                        trap 'docker logout' EXIT
+
+                        echo "$DOCKERHUB_TOKEN" | docker login \
+                            --username "$DOCKERHUB_USERNAME" \
+                            --password-stdin
+
+                        docker tag task-management-app:${BUILD_NUMBER} \
+                            "$DOCKERHUB_USERNAME/task-management-app:${BUILD_NUMBER}"
+
+                        docker push \
+                            "$DOCKERHUB_USERNAME/task-management-app:${BUILD_NUMBER}"
                     '''
                 }
             }
